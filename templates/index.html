@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- This meta tag is the definitive fix for the keyboard issue -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <title>CU-Bot | Neon-Glass Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background-dark-1: #0a0a1a;
+            --background-dark-2: #1a1a2e;
+            --primary-surface-glass: rgba(22, 33, 62, 0.8);
+            --secondary-surface: #0f3460;
+            --glow-blue: #00bfff;
+            --glow-pink: #ff00ff;
+            --glow-cyan: #00ffff;
+            --text-light: #f0f8ff;
+        }
+        html {
+            height: 100%;
+        }
+        body {
+            height: 100%;
+            position: relative;
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            background: var(--background-dark-1);
+            overflow: hidden;
+        }
+
+        #arrival-splash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 200; perspective: 800px;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .splash-content {
+            text-align: center; color: white; padding: 40px;
+            background: var(--primary-surface-glass);
+            backdrop-filter: blur(10px); border-radius: 20px;
+            border: 1px solid var(--glow-cyan);
+            box-shadow: 0 0 30px var(--glow-cyan), inset 0 0 20px rgba(0, 255, 255, 0.3);
+            transform-style: preserve-3d;
+            transform: rotateY(70deg) rotateX(10deg) translateZ(-200px);
+            opacity: 0;
+            animation: unfold 3s ease-out 1s forwards;
+        }
+        @keyframes unfold {
+            to { transform: rotateY(0deg) rotateX(0deg) translateZ(0); opacity: 1; }
+        }
+        .splash-content h1 {
+            font-size: 2.5rem; font-weight: 700; margin: 0 0 15px 0; color: #fff;
+            text-shadow: 0 0 10px var(--glow-pink), 0 0 20px var(--glow-pink);
+            letter-spacing: 2px;
+        }
+        .splash-content p {
+            font-size: 1.1rem; opacity: 0.8; letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--glow-blue);
+        }
+
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100; gap: 30px; opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            padding: 20px; box-sizing: border-box;
+        }
+        
+        #splash-logo-container {
+            width: 150px; height: 150px;
+            transition: all 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            animation: initialGlow 3s infinite alternate;
+            position: relative;
+        }
+        #splash-logo { width: 100%; height: 100%; }
+        @keyframes initialGlow {
+            from { filter: drop-shadow(0 0 10px var(--glow-cyan)); }
+            to { filter: drop-shadow(0 0 30px var(--glow-cyan)); }
+        }
+        
+        #main-content {
+            display: none; justify-content: center; align-items: center;
+            box-sizing: border-box; background: transparent;
+            opacity: 0; transition: opacity 1s ease-in-out;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 20px; z-index: 50;
+        }
+
+        .login-container {
+            width: 420px; padding: 40px; background-color: var(--primary-surface-glass);
+            backdrop-filter: blur(12px); border-radius: 24px; text-align: center;
+            color: var(--text-light); z-index: 10;
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            transition: opacity 0.5s ease-out;
+        }
+        .login-container h1 { color: var(--glow-blue); text-shadow: 0 0 10px var(--glow-blue); margin-bottom: 10px; font-size: 2.5rem; }
+        .login-container p { margin-bottom: 30px; font-size: 1.1rem; opacity: 0.8; }
+        .login-input { width: 100%; padding: 15px; margin-bottom: 20px; border: 1px solid var(--glow-blue); background-color: var(--secondary-surface); border-radius: 10px; color: var(--text-light); font-size: 1rem; font-family: 'Rajdhani', sans-serif; box-sizing: border-box; }
+        .login-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; background: linear-gradient(45deg, var(--glow-blue), var(--glow-pink)); color: white; font-size: 1.2rem; font-weight: 700; cursor: pointer; transition: box-shadow 0.3s; }
+        .login-btn:hover { box-shadow: 0 0 20px var(--glow-blue); }
+        .skip-login { margin-top: 20px; background: none; border: none; color: var(--glow-blue); text-decoration: underline; cursor: pointer; font-size: 0.9rem; }
+
+        .chat-widget {
+            width: 420px; max-width: 100%; height: 90vh; max-height: 850px;
+            background-color: var(--primary-surface-glass);
+            backdrop-filter: blur(12px); border-radius: 24px;
+            box-shadow: 0 0 60px rgba(0, 191, 255, 0.25);
+            display: flex; flex-direction: column; position: relative;
+        }
+        .chat-widget::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 24px; border: 2px solid transparent;
+            background: linear-gradient(45deg, var(--glow-blue), var(--glow-pink)) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: destination-out; mask-composite: exclude;
+            animation: borderAnimation 4s ease-in-out infinite;
+        }
+        @keyframes borderAnimation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .chat-header { 
+            padding: 15px 20px; border-bottom: 1px solid rgba(0, 191, 255, 0.2); 
+            position: relative; flex-shrink: 0; display: flex;
+            justify-content: center; align-items: center; gap: 10px;
+        }
+        #header-logo-container {
+            height: 40px; width: 40px;
+            opacity: 0; transition: opacity 0.5s ease-in-out;
+            animation: floatGlow 4s ease-in-out infinite;
+        }
+        #header-logo-container.visible { opacity: 1; }
+        #header-logo { width: 100%; }
+        @keyframes floatGlow {
+            0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 5px var(--glow-cyan)); }
+            50% { transform: translateY(-5px); filter: drop-shadow(0 0 15px var(--glow-cyan)); }
+        }
+        .chat-header h1 { 
+            margin: 0; font-size: 2.2rem; font-weight: 700; 
+            background: linear-gradient(90deg, var(--glow-cyan), var(--glow-pink));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: glowHeader 4s ease-in-out infinite alternate;
+        }
+        @keyframes glowHeader {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px var(--glow-blue), 0 0 20px var(--glow-blue); }
+            to { text-shadow: 0 0 10px #fff, 0 0 20px var(--glow-pink), 0 0 30px var(--glow-pink); }
+        }
+        #backToLoginButton { position: absolute; top: 50%; left: 20px; transform: translateY(-50%); background: none; border: 1px solid var(--glow-blue); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s, box-shadow 0.3s; }
+        #backToLoginButton:hover { transform: translateY(-50%) scale(1.1); box-shadow: 0 0 10px var(--glow-cyan); }
+        #backToLoginButton svg { fill: var(--glow-blue); width: 20px; height: 20px; }
+        
+        .chat-window { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+        .chat-window::-webkit-scrollbar { width: 8px; }
+        .chat-window::-webkit-scrollbar-track { background: var(--background-dark-2); border-radius: 10px; }
+        .chat-window::-webkit-scrollbar-thumb { background-color: var(--glow-blue); border-radius: 10px; border: 2px solid var(--background-dark-2); }
+        
+        @keyframes fadeInMessage { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message-container { display: flex; align-items: flex-end; gap: 8px; max-width: 90%; z-index: 1; animation: fadeInMessage 0.4s ease-out; }
+        .message-container.user { align-self: flex-end; }
+        .message-container.bot { align-self: flex-start; }
+        .message { padding: 12px 18px; border-radius: 18px; line-height: 1.5; color: var(--text-light); }
+        .user-message { background: linear-gradient(45deg, var(--glow-pink), #c300c3); border-bottom-right-radius: 4px; }
+        .bot-message { background-color: var(--secondary-surface); border-bottom-left-radius: 4px; }
+        .speak-btn { background: var(--primary-surface-glass); border: 1px solid var(--glow-blue); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 5px; transition: background-color 0.3s, transform 0.3s; }
+        .speak-btn:hover { background: var(--secondary-surface); transform: scale(1.1); }
+        .speak-btn svg { width: 16px; height: 16px; fill: var(--glow-blue); }
+
+        .initial-view { text-align: center; }
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+        .action-btn { 
+            border: 1px solid var(--glow-blue); background-color: transparent; backdrop-filter: blur(5px); border-radius: 14px; 
+            padding: 15px 5px; color: var(--glow-blue); font-size: 1rem; font-weight: 700; font-family: 'Rajdhani', sans-serif; 
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 105px; 
+            transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+            opacity: 0; transform: scale(0.9); animation: popIn 0.5s ease-out forwards;
+        }
+        .action-buttons .action-btn:nth-child(1) { animation-delay: 0.2s; }
+        .action-buttons .action-btn:nth-child(2) { animation-delay: 0.3s; }
+        .action-buttons .action-btn:nth-child(3) { animation-delay: 0.4s; }
+        .action-buttons .action-btn:nth-child(4) { animation-delay: 0.5s; }
+        .action-btn:hover { background-color: rgba(0, 191, 255, 0.1); box-shadow: 0 0 15px rgba(0, 191, 255, 0.5); transform: translateY(-3px) scale(1.02); }
+        .action-btn span { margin-top: 10px; }
+        
+        .message-input-area {
+            padding: 15px; border-top: 1px solid rgba(0, 191, 255, 0.2); 
+            z-index: 1; flex-shrink: 0;
+        }
+        #visualSearchContainer {
+            background-color: var(--secondary-surface);
+            border-radius: 15px; padding: 10px; margin-bottom: 10px;
+            border: 1px solid var(--glow-blue); display: none;
+            align-items: center; gap: 10px;
+        }
+        #imagePreview { max-width: 50px; max-height: 50px; border-radius: 8px; }
+        #destinationInput {
+            flex-grow: 1; background-color: var(--background-dark-2); border: 1px solid var(--glow-blue);
+            border-radius: 8px; padding: 8px 12px; color: var(--text-light); font-family: 'Rajdhani', sans-serif;
+        }
+        #getDirectionsBtn {
+            padding: 8px 12px; background: linear-gradient(45deg, var(--glow-blue), var(--glow-pink));
+            border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer;
+        }
+
+        .message-input-container { display: flex; align-items: center; }
+        #userInput { flex-grow: 1; min-width: 0; background-color: var(--secondary-surface); border: 1px solid transparent; border-radius: 20px; padding: 10px 15px; font-size: 1em; margin-right: 10px; color: var(--text-light); font-family: 'Rajdhani', sans-serif; }
+        #userInput:focus { outline: none; border-color: var(--glow-blue); box-shadow: 0 0 10px var(--glow-blue); }
+        .icon-btn { background-color: var(--secondary-surface); border: none; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s; display: flex; align-items: center; justify-content: center; margin-left: 5px; flex-shrink: 0; }
+        .icon-btn svg { fill: white; transition: fill 0.3s; }
+        .icon-btn:hover { box-shadow: 0 0 15px var(--glow-blue), 0 0 5px var(--glow-cyan); transform: scale(1.1); }
+        .icon-btn:hover svg { fill: var(--glow-cyan); }
+        .icon-btn.listening { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 191, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); } }
+        
+        .typing-indicator { align-self: flex-start; margin: 10px 0; z-index: 1; }
+        .typing-indicator p { font-family: 'Rajdhani', sans-serif; color: var(--glow-cyan); font-size: 0.9em; text-shadow: 0 0 5px var(--glow-cyan); }
+        .blink-cursor { animation: blink 1s step-end infinite; }
+        @keyframes blink { from, to { color: transparent; } 50% { color: var(--glow-cyan); } }
+
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+        }
+
+        /* --- Mobile Responsive Styles --- */
+        @media (max-width: 600px) {
+            #main-content {
+                padding: 0;
+                align-items: stretch; 
+            }
+            .chat-widget {
+                width: 100%; 
+                height: 100%;
+                max-height: 100%;
+                flex-grow: 1;
+                border-radius: 0; 
+                box-shadow: none; 
+                border: none;
+            }
+            .chat-widget::before { border-radius: 0; }
+            .login-container {
+                width: 100%; max-width: 420px; flex-grow: 1;
+                display: flex; flex-direction: column; justify-content: center;
+            }
+            .splash-content h1 { font-size: 2rem; }
+            .chat-header h1 { font-size: 1.8rem; }
+            #backToLoginButton { left: 15px; }
+            .initial-view { padding: 0 15px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div id="arrival-splash">
+        <div class="splash-content">
+            <h1>Welcome to CU-Bot</h1>
+            <p>Developed by Shubham, Suhani, Ruhani, and Aditya</p>
+        </div>
+    </div>
+
+    <div id="login-screen">
+        <div id="splash-logo-container">
+            <img id="splash-logo" src="https://www.educationmitra.in/assets/images/university/CHANDIGARH/logo.png" alt="CU Logo">
+        </div>
+        <div id="loginContainer" class="login-container">
+            <h1>CU-BOT</h1>
+            <p>Connect with CUIMS for a personalized experience.</p>
+            <input type="text" class="login-input" placeholder="Enter your UID (e.g., 21BCS1234)">
+            <input type="password" class="login-input" placeholder="Enter your CUIMS Password">
+            <button id="loginButton" class="login-btn">Connect to CUIMS</button>
+            <button id="skipLoginButton" class="skip-login">Continue as Guest</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="chatWidget" class="chat-widget">
+            <div class="chat-header">
+                <button id="backToLoginButton" title="Back to Login"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg></button>
+                <div id="header-logo-container">
+                    <img id="header-logo" src="https://www.educationmitra.in/assets/images/university/CHANDIGARH/logo.png" alt="CU Logo">
+                </div>
+                <h1>CU-BOT</h1>
+            </div>
+            <div class="chat-window" id="chatWindow"></div>
+            <div class="message-input-area">
+                <div id="visualSearchContainer">
+                    <img id="imagePreview" src="" alt="Image Preview">
+                    <input type="text" id="destinationInput" placeholder="Enter destination...">
+                    <button id="getDirectionsBtn">Go</button>
+                </div>
+                <div class="message-input-container">
+                    <input type="text" id="userInput" placeholder="Initiate communication..." autocomplete="off">
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                    <button id="visualSearchBtn" class="icon-btn" aria-label="Visual Search"><svg viewBox="0 0 24 24" fill="white"><path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm15 4h-3v2h3v3h2v-3h3V8h-3V5h-2v3zM4 20v-3H1v-2h3v-3h2v3h3v2H6v3H4z"/><!-- Different icon for visual search --></svg></button>
+                    <button id="voiceButton" class="icon-btn" aria-label="Start voice input"><svg viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg></button>
+                    <button id="sendButton" class="icon-btn" aria-label="Send Message"><svg viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    window.addEventListener('load', () => {
+        const arrivalSplash = document.getElementById('arrival-splash');
+        const loginScreen = document.getElementById('login-screen');
+        const splashLogoContainer = document.getElementById('splash-logo-container');
+        const mainContent = document.getElementById('main-content');
+        const headerLogoContainer = document.getElementById('header-logo-container');
+        const loginContainer = document.getElementById('loginContainer');
+        const loginButton = document.getElementById('loginButton');
+        const skipLoginButton = document.getElementById('skipLoginButton');
+        const chatWindow = document.getElementById('chatWindow');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const voiceButton = document.getElementById('voiceButton');
+        const visualSearchBtn = document.getElementById('visualSearchBtn');
+        const imageUpload = document.getElementById('imageUpload');
+        const visualSearchContainer = document.getElementById('visualSearchContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const destinationInput = document.getElementById('destinationInput');
+        const getDirectionsBtn = document.getElementById('getDirectionsBtn');
+        const backToLoginButton = document.getElementById('backToLoginButton');
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        let particles = [];
+        const colors = ["#00bfff", "#ff00ff", "#00ffff"];
+        class Particle { 
+            constructor(x, y) { this.x = x; this.y = y; this.size = Math.random() * 2 + 1; this.speedX = Math.random() * 1 - 0.5; this.speedY = Math.random() * 1 - 0.5; this.color = colors[Math.floor(Math.random() * colors.length)]; }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.x > canvas.width || this.x < 0) this.speedX *= -1; if (this.y > canvas.height || this.y < 0) this.speedY *= -1; if (this.size > 0.1) this.size -= 0.01; }
+            draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
+        function handleParticles() { for (let i = 0; i < particles.length; i++) { particles[i].update(); particles[i].draw(); if (particles[i].size <= 0.2) { particles.splice(i, 1); i--; } } }
+        function animateParticles() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (particles.length < 150) { particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height)); } handleParticles(); requestAnimationFrame(animateParticles); }
+        animateParticles();
+        history.replaceState({page: 'arrival'}, 'Arrival', '#arrival');
+        setTimeout(() => {
+            arrivalSplash.style.opacity = '0';
+            arrivalSplash.addEventListener('transitionend', () => {
+                arrivalSplash.style.display = 'none';
+                loginScreen.style.opacity = '1';
+                history.pushState({page: 'login'}, 'Login', '#login');
+            }, { once: true });
+        }, 4000);
+        function startTransition() {
+            loginContainer.style.opacity = '0';
+            mainContent.style.display = 'flex';
+            mainContent.style.opacity = '0.01';
+            const rect = headerLogoContainer.getBoundingClientRect();
+            mainContent.style.display = 'none';
+            mainContent.style.opacity = '0';
+            splashLogoContainer.style.position = 'fixed';
+            splashLogoContainer.style.top = `${rect.top}px`;
+            splashLogoContainer.style.left = `${rect.left}px`;
+            splashLogoContainer.style.width = `${rect.width}px`;
+            splashLogoContainer.style.height = `${rect.height}px`;
+            splashLogoContainer.style.animation = 'none';
+            splashLogoContainer.addEventListener('transitionend', (event) => {
+                if (event.propertyName.includes('width') || event.propertyName.includes('height')) {
+                    if (history.state.page === 'login') {
+                        loginScreen.style.display = 'none';
+                        mainContent.style.display = 'flex';
+                        mainContent.style.opacity = '1';
+                        headerLogoContainer.classList.add('visible');
+                        history.pushState({page: 'chat'}, 'Chat', '#chat');
+                        showChat();
+                    }
+                }
+            }, { once: true }); 
+        }
+        loginButton.addEventListener('click', () => { alert("Thank you for logging in! This is a demo feature."); startTransition(); });
+        skipLoginButton.addEventListener('click', startTransition);
+        backToLoginButton.addEventListener('click', () => history.back());
+        window.onpopstate = function(event) {
+            if (event.state && event.state.page === 'login') {
+                mainContent.style.opacity = '0';
+                mainContent.addEventListener('transitionend', () => {
+                    mainContent.style.display = 'none';
+                    loginScreen.style.display = 'flex';
+                    headerLogoContainer.classList.remove('visible');
+                    requestAnimationFrame(() => {
+                        loginScreen.style.opacity = '1';
+                        loginContainer.style.opacity = '1';
+                        splashLogoContainer.style.position = 'relative';
+                        splashLogoContainer.style.removeProperty('top');
+                        splashLogoContainer.style.removeProperty('left');
+                        splashLogoContainer.style.removeProperty('width');
+                        splashLogoContainer.style.removeProperty('height');
+                        splashLogoContainer.style.animation = 'initialGlow 3s infinite alternate';
+                    });
+                }, { once: true });
+            } else if (!event.state || (event.state && event.state.page === 'arrival')) {
+                 location.reload();
+            }
+        };
+        let lastInputMethod = 'text'; let currentlySpeakingText = null;
+        function showChat() {
+            chatWindow.innerHTML = ''; lastInputMethod = 'text';
+            addMessage("Hello! I am your guide to Chandigarh University, but you can ask me anything!", 'bot');
+            const initialView = document.createElement('div');
+            initialView.id = 'initialView'; initialView.className = 'initial-view';
+            initialView.innerHTML = `<div class="action-buttons">
+                <button class="action-btn" onclick="sendPredefinedMessage('Tell me about admissions')"><span>Admissions</span></button>
+                <button class="action-btn" onclick="sendPredefinedMessage('Tell me about hostels')"><span>Hostels</span></button>
+                <button class="action-btn" onclick="sendPredefinedMessage('How are placements?')"><span>Placements</span></button>
+                <button class="action-btn" onclick="sendPredefinedMessage('Contact DSW')"><span>Contact DSW</span></button>
+            </div>`;
+            chatWindow.appendChild(initialView);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false; recognition.lang = 'en-US'; recognition.interimResults = false;
+            recognition.onstart = () => voiceButton.classList.add('listening');
+            recognition.onresult = (event) => { userInput.value = event.results[0][0].transcript; lastInputMethod = 'voice'; sendMessage(); };
+            recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
+            recognition.onend = () => voiceButton.classList.remove('listening');
+        } else { voiceButton.style.display = 'none'; }
+        function speak(text) {
+            speechSynthesis.cancel(); const cleanText = text.replace(/###|[*_#]/g, ''); const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.onstart = () => currentlySpeakingText = text; utterance.onend = () => currentlySpeakingText = null; utterance.onerror = () => currentlySpeakingText = null;
+            speechSynthesis.speak(utterance);
+        }
+        function addMessage(text, sender) {
+            const container = document.createElement('div'); container.className = `message-container ${sender}`;
+            const messageDiv = document.createElement('div'); messageDiv.className = `message ${sender}-message`;
+            if (sender === 'bot') {
+                messageDiv.innerHTML = marked.parse(text);
+                if (lastInputMethod === 'voice') {
+                    speak(text); container.appendChild(messageDiv);
+                } else {
+                    const speakButton = document.createElement('button'); speakButton.className = 'speak-btn'; speakButton.setAttribute('aria-label', 'Read message aloud');
+                    speakButton.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>`;
+                    speakButton.onclick = () => { if (speechSynthesis.speaking && currentlySpeakingText === text) { speechSynthesis.cancel(); } else { speak(text); } };
+                    container.appendChild(messageDiv); container.appendChild(speakButton);
+                }
+            } else { messageDiv.textContent = text; container.appendChild(messageDiv); }
+            chatWindow.appendChild(container); chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+        function showTypingIndicator(show) {
+            let indicator = document.getElementById('typingIndicator');
+            if (show && !indicator) {
+                indicator = document.createElement('div'); indicator.id = 'typingIndicator'; indicator.className = 'typing-indicator';
+                indicator.innerHTML = '<p>CU-BOT is typing<span class="blink-cursor">_</span></p>';
+                chatWindow.appendChild(indicator); chatWindow.scrollTop = chatWindow.scrollHeight;
+            } else if (!show && indicator) { indicator.remove(); }
+        }
+        
+        async function handleSendMessage(messageText) {
+            const initialView = document.getElementById('initialView'); 
+            if (initialView) initialView.remove();
+            
+            addMessage(messageText, 'user');
+            userInput.value = '';
+            showTypingIndicator(true);
+
+            try {
+                // This part would be where you might also send image data if your backend supports it
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageText })
+                });
+
+                if (!response.ok) { throw new Error('Network response was not ok'); }
+
+                const data = await response.json();
+                const botResponse = data.response;
+                
+                showTypingIndicator(false);
+                addMessage(botResponse, 'bot');
+
+            } catch (error) {
+                console.error('Error fetching chat response:', error);
+                showTypingIndicator(false);
+                addMessage('Sorry, the AI is taking a break. Please try again in a moment.', 'bot');
+            }
+        }
+        
+        window.sendPredefinedMessage = function(message) { 
+            lastInputMethod = 'text'; 
+            handleSendMessage(message); 
+        }
+        
+        async function sendMessage() {
+            const userMessage = userInput.value.trim(); 
+            if (userMessage === '') return;
+            handleSendMessage(userMessage);
+            lastInputMethod = 'text'; 
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') sendMessage(); });
+        if (recognition) { voiceButton.addEventListener('click', () => { if (voiceButton.classList.contains('listening')) { recognition.stop(); } else { recognition.start(); } }); }
+        
+        // --- NEW VISUAL SEARCH LOGIC ---
+        visualSearchBtn.addEventListener('click', () => {
+            imageUpload.click();
+        });
+
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    visualSearchContainer.style.display = 'flex';
+                    destinationInput.focus();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        getDirectionsBtn.addEventListener('click', () => {
+            const destination = destinationInput.value.trim();
+            if (!destination) {
+                alert('Please enter a destination.');
+                return;
+            }
+
+            // In a real app, you would send the image and destination to a backend.
+            // For this demo, we'll just send a text message.
+            const message = `Find the best direction to ${destination} from the location in the image.`;
+            handleSendMessage(message);
+
+            // Reset the visual search UI
+            visualSearchContainer.style.display = 'none';
+            destinationInput.value = '';
+            imageUpload.value = ''; // Clear the file input
+        });
+
+    });
+</script>
+</body>
+</html>

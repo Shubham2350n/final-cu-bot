@@ -1,0 +1,104 @@
+import os
+import json
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
+from flask import Flask, request, jsonify, render_template
+from openai import OpenAI # We can still use the openai library!
+
+# --- 1. INITIALIZATION ---
+app = Flask(__name__)
+
+# --- IMPORTANT: This is the new, secure way to handle your API key ---
+# This line tells the program to look for the key in the server's environment settings.
+API_KEY = os.environ.get("OPENROUTER_API_KEY")
+
+# Initialize the client to talk to OpenRouter
+if not API_KEY:
+    print("WARNING: API Key is not set. The chatbot will not be able to answer general questions.")
+    client = None
+else:
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1", # This tells it to use OpenRouter's servers
+        api_key=API_KEY
+    )
+    print("OpenRouter client initialized successfully.")
+
+# Load the local search model and knowledge base
+print("Loading sentence transformer model for local search...")
+model = SentenceTransformer('all-MiniLM-L6-v2')
+print("Model loaded.")
+
+print("Loading knowledge base...")
+with open('knowledge_base.json', 'r', encoding='utf-8') as f:
+    knowledge_base = json.load(f)
+print(f"{len(knowledge_base)} items loaded from knowledge base.")
+
+# --- 2. CREATE THE LOCAL SEARCH INDEX (FAISS) ---
+searchable_data = [
+    f"Title: {item['title']}. Description: {item.get('description', '')}. Keywords: {item.get('keywords', '')}"
+    for item in knowledge_base
+]
+corpus_embeddings = model.encode(searchable_data, convert_to_tensor=True)
+index = faiss.IndexFlatL2(corpus_embeddings.shape[1])
+index.add(corpus_embeddings.cpu().numpy())
+print("FAISS index for local knowledge created successfully.")
+
+
+# --- 3. DEFINE THE HYBRID CHATBOT LOGIC ---
+def find_local_match(user_query):
+    """Finds the best match from the local knowledge base."""
+    query_embedding = model.encode([user_query])
+    distances, indices = index.search(query_embedding, k=1)
+    
+    if distances[0][0] < 0.7:
+        return knowledge_base[indices[0][0]]
+    return None
+
+def ask_general_ai(user_query):
+    """Asks the general purpose AI model via OpenRouter."""
+    if not client:
+        return "I can only answer questions about Chandigarh University right now. Please set up the OpenRouter API key to enable general conversation."
+    
+    try:
+        response = client.chat.completions.create(
+            # --- We use the free model name ---
+            model="deepseek/deepseek-chat", 
+            messages=[
+                {"role": "system", "content": "You are a helpful and friendly university assistant. You are guiding a student from Chandigarh University."},
+                {"role": "user", "content": user_query}
+            ],
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"An error occurred with the OpenRouter API: {e}")
+        return "I'm having trouble connecting to my advanced knowledge circuits right now. Please try again in a moment."
+
+# --- 4. CREATE THE WEB API AND FRONTEND ---
+@app.route('/')
+def home():
+    """Renders the chat interface."""
+    return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Handles the main chat logic."""
+    user_message = request.json.get('message')
+    if not user_message:
+        return jsonify({"response": "Please enter a message."})
+
+    local_match = find_local_match(user_message)
+
+    if local_match:
+        response = f"Here is the information I found on **{local_match['title']}**:\n\n{local_match['description']}"
+    else:
+        print(f"No strong local match found. Querying OpenRouter...")
+        response = ask_general_ai(user_message)
+
+    return jsonify({"response": response})
+
+
+if __name__ == '__main__':
+    print("Chatbot is ready!")
+    app.run(debug=True)
